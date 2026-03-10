@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Game Controller Calibrator</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <h1>Game Controller Calibrator</h1>
+      <p class="sub">Live diagnostics for sticks, D-pad, triggers, and buttons</p>
+    </header>
+
+    <section class="card status-grid">
+      <div>
+        <div class="label">Connection</div>
+        <div id="connectionState" class="value bad">No controller detected</div>
+      </div>
+      <div>
+        <div class="label">Controller ID</div>
+        <div id="controllerId" class="value mono">-</div>
+      </div>
+      <div>
+        <div class="label">Mapping</div>
+        <div id="mappingType" class="value mono">-</div>
+      </div>
+    </section>
+
+    <section class="card controls">
+      <h2>Calibration</h2>
+      <div class="row">
+        <button id="calibrateBtn" type="button">Calibrate Stick Center</button>
+        <button id="resetCalibrationBtn" type="button" class="secondary">Reset Calibration</button>
+      </div>
+      <div class="row">
+        <label for="deadzoneRange">Deadzone</label>
+        <input id="deadzoneRange" type="range" min="0" max="0.4" step="0.01" value="0.08" />
+        <span id="deadzoneValue" class="mono">0.08</span>
+      </div>
+      <p class="note">Calibrate while both sticks are untouched and centered.</p>
+    </section>
+
+    <section class="grid-two">
+      <article class="card">
+        <h2>Left Stick</h2>
+        <div class="stick-wrap">
+          <div class="stick-graph" id="leftStickGraph">
+            <div class="crosshair x"></div>
+            <div class="crosshair y"></div>
+            <div class="dot" id="leftStickDot"></div>
+          </div>
+        </div>
+        <div class="kv"><span>Raw X/Y:</span><span id="leftRaw" class="mono">0.000 / 0.000</span></div>
+        <div class="kv"><span>Adjusted X/Y:</span><span id="leftAdjusted" class="mono">0.000 / 0.000</span></div>
+        <div class="kv"><span>Direction:</span><span id="leftDirection">Neutral</span></div>
+      </article>
+
+      <article class="card">
+        <h2>Right Stick</h2>
+        <div class="stick-wrap">
+          <div class="stick-graph" id="rightStickGraph">
+            <div class="crosshair x"></div>
+            <div class="crosshair y"></div>
+            <div class="dot" id="rightStickDot"></div>
+          </div>
+        </div>
+        <div class="kv"><span>Raw X/Y:</span><span id="rightRaw" class="mono">0.000 / 0.000</span></div>
+        <div class="kv"><span>Adjusted X/Y:</span><span id="rightAdjusted" class="mono">0.000 / 0.000</span></div>
+        <div class="kv"><span>Direction:</span><span id="rightDirection">Neutral</span></div>
+      </article>
+    </section>
+
+    <section class="card">
+      <h2>Triggers + D-pad</h2>
+      <div class="grid-two">
+        <div>
+          <div class="kv"><span>LT:</span><span id="ltValue" class="mono">0.000</span></div>
+          <div class="bar"><div id="ltBar" class="fill"></div></div>
+          <div class="kv"><span>RT:</span><span id="rtValue" class="mono">0.000</span></div>
+          <div class="bar"><div id="rtBar" class="fill"></div></div>
+        </div>
+        <div>
+          <div class="kv"><span>D-pad:</span><span id="dpadState">Neutral</span></div>
+          <div class="dpad">
+            <div id="dpadUp" class="dbtn">U</div>
+            <div id="dpadLeft" class="dbtn">L</div>
+            <div id="dpadRight" class="dbtn">R</div>
+            <div id="dpadDown" class="dbtn">D</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Buttons</h2>
+      <div id="buttonGrid" class="button-grid"></div>
+      <h3>Raw Button Indices</h3>
+      <div id="rawButtonGrid" class="raw-grid"></div>
+    </section>
+
+    <section class="card">
+      <h2>Raw Axes</h2>
+      <pre id="axesDump" class="axes"></pre>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
