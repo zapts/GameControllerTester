@@ -23,6 +23,8 @@ const els = {
   connectionState: document.getElementById("connectionState"),
   controllerId: document.getElementById("controllerId"),
   mappingType: document.getElementById("mappingType"),
+  connectionHint: document.getElementById("connectionHint"),
+  rescanBtn: document.getElementById("rescanBtn"),
   calibrateBtn: document.getElementById("calibrateBtn"),
   resetCalibrationBtn: document.getElementById("resetCalibrationBtn"),
   deadzoneRange: document.getElementById("deadzoneRange"),
@@ -68,22 +70,52 @@ function clamp(num, min, max) {
   return Math.max(min, Math.min(max, num));
 }
 
-function getActiveGamepad() {
-  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-
-  if (selectedPadIndex !== null && pads[selectedPadIndex] && pads[selectedPadIndex].connected) {
-    return pads[selectedPadIndex];
+function listKnownPads() {
+  if (!navigator.getGamepads) {
+    return [];
   }
 
-  for (let i = 0; i < pads.length; i += 1) {
-    if (pads[i] && pads[i].connected) {
-      selectedPadIndex = i;
-      return pads[i];
+  return Array.from(navigator.getGamepads()).filter((pad) => Boolean(pad));
+}
+
+function padHasLiveInput(pad) {
+  const movedAxis = pad.axes && pad.axes.some((axis) => Math.abs(axis || 0) > 0.02);
+  const pressedButton = pad.buttons && pad.buttons.some((btn) => btn && (btn.pressed || (btn.value || 0) > 0.02));
+  return Boolean(movedAxis || pressedButton);
+}
+
+function isActivePad(pad) {
+  if (!pad) {
+    return false;
+  }
+
+  if (pad.connected) {
+    return true;
+  }
+
+  // Some Bluetooth reconnect paths do not immediately mark pad.connected=true,
+  // but inputs become visible once the user presses a button.
+  return padHasLiveInput(pad);
+}
+
+function getActiveGamepad() {
+  const pads = listKnownPads();
+
+  if (selectedPadIndex !== null) {
+    const selected = pads.find((pad) => pad.index === selectedPadIndex);
+    if (selected && isActivePad(selected)) {
+      return { activePad: selected, knownPads: pads };
     }
   }
 
+  const firstActive = pads.find((pad) => isActivePad(pad));
+  if (firstActive) {
+    selectedPadIndex = firstActive.index;
+    return { activePad: firstActive, knownPads: pads };
+  }
+
   selectedPadIndex = null;
-  return null;
+  return { activePad: null, knownPads: pads };
 }
 
 function applyDeadzone(raw, center) {
@@ -205,13 +237,24 @@ function updateTriggers(pad) {
   els.rtBar.style.width = `${clamp(rt, 0, 1) * 100}%`;
 }
 
-function resetView() {
-  els.connectionState.textContent = "No controller detected";
+function showDisconnectedState(knownPads) {
   els.connectionState.classList.remove("good");
   els.connectionState.classList.add("bad");
-  els.controllerId.textContent = "-";
   els.mappingType.textContent = "-";
 
+  if (knownPads.length > 0) {
+    const pad = knownPads[0];
+    els.connectionState.textContent = "Controller known, waiting for input";
+    els.controllerId.textContent = pad.id || `index ${pad.index}`;
+    els.connectionHint.textContent = "Controller reconnected but inactive. Click this page and press any controller button.";
+  } else {
+    els.connectionState.textContent = "No controller detected";
+    els.controllerId.textContent = "-";
+    els.connectionHint.textContent = "If reconnecting over Bluetooth, click this page and press any controller button.";
+  }
+}
+
+function resetInputView() {
   els.leftRaw.textContent = "0.000 / 0.000";
   els.leftAdjusted.textContent = "0.000 / 0.000";
   els.leftDirection.textContent = "Neutral";
@@ -239,24 +282,26 @@ function resetView() {
 }
 
 function update() {
-  const pad = getActiveGamepad();
+  const { activePad, knownPads } = getActiveGamepad();
 
-  if (!pad) {
-    resetView();
+  if (!activePad) {
+    showDisconnectedState(knownPads);
+    resetInputView();
     requestAnimationFrame(update);
     return;
   }
 
-  els.connectionState.textContent = `Connected (index ${pad.index})`;
+  els.connectionState.textContent = `Connected (index ${activePad.index})`;
   els.connectionState.classList.remove("bad");
   els.connectionState.classList.add("good");
-  els.controllerId.textContent = pad.id || "Unknown";
-  els.mappingType.textContent = pad.mapping || "non-standard";
+  els.controllerId.textContent = activePad.id || "Unknown";
+  els.mappingType.textContent = activePad.mapping || "non-standard";
+  els.connectionHint.textContent = "Live input detected.";
 
-  const lx = pad.axes[0] || 0;
-  const ly = pad.axes[1] || 0;
-  const rx = pad.axes[2] || 0;
-  const ry = pad.axes[3] || 0;
+  const lx = activePad.axes[0] || 0;
+  const ly = activePad.axes[1] || 0;
+  const rx = activePad.axes[2] || 0;
+  const ry = activePad.axes[3] || 0;
 
   const leftAdjX = applyDeadzone(lx, calibration.leftX);
   const leftAdjY = applyDeadzone(ly, calibration.leftY);
@@ -273,25 +318,25 @@ function update() {
   els.rightDirection.textContent = pairDirection(rightAdjX, rightAdjY);
   updateStickDot(els.rightStickDot, rightAdjX, rightAdjY);
 
-  updateTriggers(pad);
-  updateDpad(pad);
-  updateNamedButtons(pad);
-  updateRawButtons(pad);
-  updateAxesDump(pad);
+  updateTriggers(activePad);
+  updateDpad(activePad);
+  updateNamedButtons(activePad);
+  updateRawButtons(activePad);
+  updateAxesDump(activePad);
 
   requestAnimationFrame(update);
 }
 
 els.calibrateBtn.addEventListener("click", () => {
-  const pad = getActiveGamepad();
-  if (!pad) {
+  const { activePad } = getActiveGamepad();
+  if (!activePad) {
     return;
   }
 
-  calibration.leftX = pad.axes[0] || 0;
-  calibration.leftY = pad.axes[1] || 0;
-  calibration.rightX = pad.axes[2] || 0;
-  calibration.rightY = pad.axes[3] || 0;
+  calibration.leftX = activePad.axes[0] || 0;
+  calibration.leftY = activePad.axes[1] || 0;
+  calibration.rightX = activePad.axes[2] || 0;
+  calibration.rightY = activePad.axes[3] || 0;
 });
 
 els.resetCalibrationBtn.addEventListener("click", () => {
@@ -304,6 +349,20 @@ els.resetCalibrationBtn.addEventListener("click", () => {
 els.deadzoneRange.addEventListener("input", (event) => {
   deadzone = Number(event.target.value);
   els.deadzoneValue.textContent = deadzone.toFixed(2);
+});
+
+els.rescanBtn.addEventListener("click", () => {
+  selectedPadIndex = null;
+});
+
+window.addEventListener("focus", () => {
+  selectedPadIndex = null;
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    selectedPadIndex = null;
+  }
 });
 
 window.addEventListener("gamepadconnected", (event) => {

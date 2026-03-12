@@ -31,14 +31,15 @@ It is useful for controller troubleshooting, calibration checks, and verifying b
 
 ## Quick Start
 
-1. Open a terminal in this project folder.
-2. Start a local server:
+1. Connect your GameSir controller to your computer first (Bluetooth or USB), before opening the app.
+2. Open a terminal in this project folder.
+3. Start a local server:
 
 ```powershell
 python -m http.server 8080
 ```
 
-3. Open the app in your browser:
+4. Open the app in your browser:
 
 [http://localhost:8080](http://localhost:8080)
 
@@ -77,8 +78,10 @@ If a named button does not match what you pressed, use the **Raw Button Indices*
 
 ### Controller not detected
 
-- Reconnect controller and refresh the page.
-- Press a button after page load (some browsers require user input first).
+- Connect/power on the controller before launching the app whenever possible.
+- Click inside the app tab, then press any controller button.
+- If Bluetooth reconnects but still shows no input, click **Rescan Controller**.
+- Reconnect controller and refresh the page if needed.
 - Try Chrome/Edge if another browser fails.
 
 ### `localhost:8080` does not open

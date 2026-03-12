@@ -82,7 +82,7 @@ h3 {
   font-family: "Consolas", "Cascadia Code", monospace;
 }
 
-.controls .row {
+.row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -269,3 +269,4 @@ button:hover {
     grid-template-columns: 1fr;
   }
 }
+
